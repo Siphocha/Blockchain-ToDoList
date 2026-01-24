@@ -1,8 +1,5 @@
 #include "sha256.h"
-#include <stdio.h>
-//Importing that new sha256 library right here
 
-//notice the inversions of each, whether right or left out of necessity.
 #define ROTLEFT(a,b) (((a) << (b)) | ((a) >> (32-(b))))
 #define ROTRIGHT(a,b) (((a) >> (b)) | ((a) << (32-(b))))
 
@@ -13,7 +10,6 @@
 #define SIG0(x) (ROTRIGHT(x,7) ^ ROTRIGHT(x,18) ^ ((x) >> 3))
 #define SIG1(x) (ROTRIGHT(x,17) ^ ROTRIGHT(x,19) ^ ((x) >> 10))
 
-//const unchanging var which will hold our unsigned integers.
 static const uint32_t k[64] = {
     0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,
     0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
@@ -33,45 +29,28 @@ static const uint32_t k[64] = {
     0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
 };
 
-//sha256 implementations from library we imported above.
 void sha256_transform(SHA256_CTX *ctx, const uint8_t data[]) {
     uint32_t a, b, c, d, e, f, g, h, i, j, t1, t2, m[64];
     
     for (i = 0, j = 0; i < 16; ++i, j += 4)
-        m[i] = (data[j] << 24) | (data[j + 1] << 16) | (data[j + 2] << 8) | (data[j + 3]);
-    for (; i < 64; ++i)
+        m[i] = (data[j] << 24) | (data[j + 1] << 16) | 
+               (data[j + 2] << 8) | (data[j + 3]);
+    for ( ; i < 64; ++i)
         m[i] = SIG1(m[i - 2]) + m[i - 7] + SIG0(m[i - 15]) + m[i - 16];
     
-    a = ctx->state[0];
-    b = ctx->state[1];
-    c = ctx->state[2];
-    d = ctx->state[3];
-    e = ctx->state[4];
-    f = ctx->state[5];
-    g = ctx->state[6];
-    h = ctx->state[7];
+    a = ctx->state[0]; b = ctx->state[1]; c = ctx->state[2]; d = ctx->state[3];
+    e = ctx->state[4]; f = ctx->state[5]; g = ctx->state[6]; h = ctx->state[7];
     
     for (i = 0; i < 64; ++i) {
-        t1 = h + EP1(e) + CH(e,f,g) + k[i] + m[i];
-        t2 = EP0(a) + MAJ(a,b,c);
-        h = g;
-        g = f;
-        f = e;
-        e = d + t1;
-        d = c;
-        c = b;
-        b = a;
-        a = t1 + t2;
+        t1 = h + EP1(e) + CH(e, f, g) + k[i] + m[i];
+        t2 = EP0(a) + MAJ(a, b, c);
+        h = g; g = f; f = e; e = d + t1;
+        d = c; c = b; b = a; a = t1 + t2;
     }
     
-    ctx->state[0] += a;
-    ctx->state[1] += b;
-    ctx->state[2] += c;
-    ctx->state[3] += d;
-    ctx->state[4] += e;
-    ctx->state[5] += f;
-    ctx->state[6] += g;
-    ctx->state[7] += h;
+    ctx->state[0] += a; ctx->state[1] += b; ctx->state[2] += c;
+    ctx->state[3] += d; ctx->state[4] += e; ctx->state[5] += f;
+    ctx->state[6] += g; ctx->state[7] += h;
 }
 
 void sha256_init(SHA256_CTX *ctx) {
@@ -89,7 +68,6 @@ void sha256_init(SHA256_CTX *ctx) {
 
 void sha256_update(SHA256_CTX *ctx, const uint8_t data[], size_t len) {
     uint32_t i;
-    
     for (i = 0; i < len; ++i) {
         ctx->data[ctx->datalen] = data[i];
         ctx->datalen++;
@@ -103,7 +81,6 @@ void sha256_update(SHA256_CTX *ctx, const uint8_t data[], size_t len) {
 
 void sha256_final(SHA256_CTX *ctx, uint8_t hash[]) {
     uint32_t i = ctx->datalen;
-    
     if (ctx->datalen < 56) {
         ctx->data[i++] = 0x80;
         while (i < 56)
@@ -139,17 +116,9 @@ void sha256_final(SHA256_CTX *ctx, uint8_t hash[]) {
     }
 }
 
-void sha256_string(const char *str, uint8_t hash[SHA256_BLOCK_SIZE]) {
+void sha256(const uint8_t *data, size_t len, uint8_t hash[]) {
     SHA256_CTX ctx;
     sha256_init(&ctx);
-    sha256_update(&ctx, (const uint8_t*)str, strlen(str));
+    sha256_update(&ctx, data, len);
     sha256_final(&ctx, hash);
-}
-
-void sha256_to_string(const uint8_t hash[SHA256_BLOCK_SIZE], char output[65]) {
-    char *ptr = output;
-    for (int i = 0; i < SHA256_BLOCK_SIZE; i++) {
-        ptr += sprintf(ptr, "%02x", hash[i]);
-    }
-    output[64] = 0;
 }
